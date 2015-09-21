@@ -1,3 +1,3 @@
-extern crate hyper;
+#[macro_use] extern crate hyper;
 
-pub mod leancloud;
+pub mod object;

@@ -1,6 +1,6 @@
 extern crate lcrc;
 
-use lcrc::leancloud::hello;
+use lcrc::object::hello;
 
 
 #[test]
