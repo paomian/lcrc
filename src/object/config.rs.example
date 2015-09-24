@@ -1,0 +1,2 @@
+pub static APP_ID: &'static str = "You APP ID";
+pub static APP_KEY: &'static str = "You APP KEY";

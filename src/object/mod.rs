@@ -3,4 +3,7 @@
 //use hyper::Client;
 //use hyper::header::Connection;
 
-pub mod hello;
+mod common;
+mod config;
+//pub mod object;
+pub mod query;

@@ -5,3 +5,5 @@ authors = ["paomian <xpaomian@gmail.com>"]
 
 [dependencies]
 hyper = "0.6"
+toml = "0.1"
+rustc-serialize = "*"
