@@ -10,3 +10,12 @@ pub fn test() {
     obj._descript = String::from("hello");
     println!("{:?}",obj);
 }
+
+pub fn query_by_id(id: String, class: String) -> LcObject {
+    let data = get(&id,&class);
+    let json = Json::from_str(&data).unwrap();
+    let mut obj = LcObject::new(&class);
+    println!("{}",obj.get_class());
+    obj._descript = "Hello World";
+
+}
