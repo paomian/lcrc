@@ -1,17 +1,30 @@
 use rustc_serialize::json::Json;
 use rustc_serialize::json::Json::Object;
+
 use std::option::Option;
 use std::collections::BTreeMap;
+use std::result::Result;
 
 use hyper::Client;
 //use hyper::header::Connection;
 use hyper::header::{Headers, ContentType};
 use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
+use super::config;
+
 header! { (XLcId, "X-LC-Id") => [String] }
 header! { (XLcKey, "X-LC-Key") => [String] }
 
-use super::config;
+#[derive(Clone, Copy, PartialEq)]
+pub enum LcObjectErrorCode {
+    NotOneObject,
+}
+
+pub enum ObjectError {
+    NotOneObjectError(LcObjectErrorCode,usize,usize),
+    Other(String),
+}
+
 
 #[derive(Debug)]
 pub struct LcObject {
@@ -37,27 +50,28 @@ impl LcObject {
         self._be_saved
     }
 
-    pub fn set(&mut self, key: String, value: Json) {
+    pub fn set(&mut self, key: String, value: Json) -> Option<Json> {
         if let Some(ref mut data) = self._data {
-            data.insert(key,value);
+            data.insert(key,value)
         } else {
             let mut map = BTreeMap::new();
             map.insert(key,value);
             self._data = Some(map);
+            None
         }
     }
 
-    pub fn get(&self,key: String) -> Option<Json> {
+    pub fn get(&self,key: &str) -> Option<&Json> {
         if let Some(ref data) = self._data {
-            Some(data.get(&key).unwrap().clone())
+            Some(data.get(key).unwrap())
         } else {
             None
         }
     }
 
-    pub fn remove (&mut self, key: String) -> Option<Json> {
+    pub fn remove (&mut self, key: &str) -> Option<Json> {
         if let Some(ref mut data) = self._data {
-            data.remove(&key)
+            data.remove(key)
         } else {
             None
         }
@@ -65,13 +79,26 @@ impl LcObject {
 
     pub fn to_string(&self) -> Option<String> {
         if let Some(ref data) = self._data {
-            Some(Json::Object(data.to_owned()).to_string())
+            Some(Json::Object(data.clone()).to_string())
         } else {
             None
         }
     }
 
-    pub fn from_string(&self) -> &Self
+    pub fn from_string(mut self, json: String) -> Result<Option<Self>,ObjectError> {
+        let data = Json::from_str(&json).unwrap();
+        if !data.is_object() {
+            return Err(ObjectError::NotOneObjectError(LcObjectErrorCode::NotOneObject,0,0));
+        }
+        if let Some(ref mut self_data) = self._data {
+            for (key, value) in data.as_object().unwrap().iter() {
+                self_data.insert(key.to_owned(),value.to_owned());
+            }
+        } else {
+            self._data = Some(data.as_object().unwrap().clone());
+        }
+        Ok(Some(self))
+    }
 }
 
 //static CLIENT: Client = Client::new();
