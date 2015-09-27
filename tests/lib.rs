@@ -1,9 +1,12 @@
 extern crate lcrc;
+extern crate rustc_serialize;
 
-use lcrc::object::query::query_by_id;
+use lcrc::object::common;
+use rustc_serialize::json::Json;
 
 
 #[test]
+/*
 pub fn test() {
     let mut obj = query_by_id(String::from("55fbbeb360b2780e16f6d30b"),
                           String::from("Post"));
@@ -18,4 +21,12 @@ pub fn query_by_id(id: String, class: String) -> LcObject {
     println!("{}",obj.get_class());
     obj._descript = "Hello World";
 
+}
+*/
+
+pub fn hello() {
+    let mut me = common::LcObject::new("me");
+    me.set("hello".to_string(),Json::String("world".to_string()));
+    me.set("paomian".to_string(),Json::String("ipaomian".to_string()));
+    println!("{}",me.to_string().unwrap());
 }

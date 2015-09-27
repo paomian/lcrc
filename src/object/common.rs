@@ -18,17 +18,23 @@ pub struct LcObject {
     pub _data: Option<BTreeMap<String,Json>>,
     _class: String,
     pub _descript: Option<String>,
+    _be_saved: bool,
 }
 
 impl LcObject {
     pub fn new(class: &str) -> LcObject {
         LcObject {_data: None,
                   _class: String::from(class),
-                  _descript: None}
+                  _descript: None,
+                  _be_saved: false}
     }
 
     pub fn get_class(&self) -> String {
         self._class.clone()
+    }
+
+    pub fn saved(&self) -> bool {
+        self._be_saved
     }
 
     pub fn set(&mut self, key: String, value: Json) {
@@ -41,13 +47,34 @@ impl LcObject {
         }
     }
 
-    pub fn get(&self,key: String) -> String {
-        if let Some(data)
+    pub fn get(&self,key: String) -> Option<Json> {
+        if let Some(ref data) = self._data {
+            Some(data.get(&key).unwrap().clone())
+        } else {
+            None
+        }
     }
+
+    pub fn remove (&mut self, key: String) -> Option<Json> {
+        if let Some(ref mut data) = self._data {
+            data.remove(&key)
+        } else {
+            None
+        }
+    }
+
+    pub fn to_string(&self) -> Option<String> {
+        if let Some(ref data) = self._data {
+            Some(Json::Object(data.to_owned()).to_string())
+        } else {
+            None
+        }
+    }
+
+    pub fn from_string(&self) -> &Self
 }
 
 //static CLIENT: Client = Client::new();
-static API: &'static str = "https://api.leanclou.cn/1.1/classes";
 /*
 pub gen_url(id: Option<&String>, class: &String,url_parma: Option<&String>) -> String {
 
