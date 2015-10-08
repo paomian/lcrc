@@ -28,7 +28,7 @@ pub enum ObjectError {
 
 #[derive(Debug)]
 pub struct LcObject {
-    pub _data: Option<BTreeMap<String,Json>>,
+    _data: Option<BTreeMap<String,Json>>,
     _class: String,
     pub _descript: Option<String>,
     _be_saved: bool,
@@ -63,7 +63,7 @@ impl LcObject {
 
     pub fn get(&self,key: &str) -> Option<&Json> {
         if let Some(ref data) = self._data {
-            Some(data.get(key).unwrap())
+            data.get(key)
         } else {
             None
         }
@@ -72,6 +72,14 @@ impl LcObject {
     pub fn remove (&mut self, key: &str) -> Option<Json> {
         if let Some(ref mut data) = self._data {
             data.remove(key)
+        } else {
+            None
+        }
+    }
+
+    pub fn object_id(&self) -> Option<String> {
+        if let Some(ref data) = self._data {
+            Some(data.get("objectId").unwrap().as_string().unwrap().to_owned())
         } else {
             None
         }
@@ -99,6 +107,8 @@ impl LcObject {
         }
         Ok(Some(self))
     }
+
+    pub save(&mut self) -> Result<>
 }
 
 //static CLIENT: Client = Client::new();
