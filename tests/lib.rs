@@ -28,5 +28,7 @@ pub fn hello() {
     let mut me = common::LcObject::new("me");
     me.set("hello".to_string(),Json::String("world".to_string()));
     me.set("paomian".to_string(),Json::String("ipaomian".to_string()));
+    me.save();
+    println!("{}",me.object_id().unwrap());
     println!("{}",me.to_string().unwrap());
 }

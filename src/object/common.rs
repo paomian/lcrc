@@ -5,15 +5,47 @@ use std::option::Option;
 use std::collections::BTreeMap;
 use std::result::Result;
 
+use std::io::Read;
+
+use hyper;
 use hyper::Client;
 //use hyper::header::Connection;
 use hyper::header::{Headers, ContentType};
 use hyper::mime::{Mime, TopLevel, SubLevel, Attr, Value};
 
+//use log::Log;
+
 use super::config;
 
 header! { (XLcId, "X-LC-Id") => [String] }
 header! { (XLcKey, "X-LC-Key") => [String] }
+
+
+
+pub fn save(json: &String,class: &String) -> Result<Json,String> {
+    let mut headers = Headers::new();
+    headers.set(XLcId(config::APP_ID.to_string()));
+    headers.set(XLcKey(config::APP_KEY.to_string()));
+    headers.set(
+        ContentType(Mime(TopLevel::Application, SubLevel::Json,
+                         vec![(Attr::Charset, Value::Utf8)])));
+    let url = [config::API, "classes/", &class[..]].concat();
+    let client = Client::new();
+
+    let mut res = client.post(&url)
+        .headers(headers)
+        .body(json).send().unwrap();
+    if res.status == hyper::status::StatusCode::Created {
+        let mut body = String::new();
+        res.read_to_string(&mut body).unwrap();
+        info!("{}",body);
+        Ok(Json::from_str(&body).unwrap())
+    } else {
+        info!("{}",res.status);
+        info!("{}",res.url);
+        Err(String::from("error"))
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum LcObjectErrorCode {
@@ -30,6 +62,7 @@ pub enum ObjectError {
 pub struct LcObject {
     _data: Option<BTreeMap<String,Json>>,
     _class: String,
+    _objectid: Option<String>,
     pub _descript: Option<String>,
     _be_saved: bool,
 }
@@ -39,7 +72,8 @@ impl LcObject {
         LcObject {_data: None,
                   _class: String::from(class),
                   _descript: None,
-                  _be_saved: false}
+                  _be_saved: false,
+                  _objectid: None}
     }
 
     pub fn get_class(&self) -> String {
@@ -78,8 +112,8 @@ impl LcObject {
     }
 
     pub fn object_id(&self) -> Option<String> {
-        if let Some(ref data) = self._data {
-            Some(data.get("objectId").unwrap().as_string().unwrap().to_owned())
+        if self._be_saved {
+            self._objectid.to_owned()
         } else {
             None
         }
@@ -108,8 +142,25 @@ impl LcObject {
         Ok(Some(self))
     }
 
-    pub save(&mut self) -> Result<>
+    pub fn save(&mut self) -> Result<bool,String> {
+        if let Some(_) = self._data {
+            let json = self.to_string().unwrap();
+            //save(&json,self._class)
+            if let Ok(ref data) = save(&json,&self._class) {
+                let objid = data.as_object().unwrap().get("objectId").unwrap();
+                self._objectid = Some(String::from(objid.as_string().unwrap()));
+                self._be_saved = true;
+                Ok(true)
+            } else {
+                Err(String::from("error"))
+            }
+        } else {
+            Err(String::from("error"))
+        }
+    }
 }
+
+
 
 //static CLIENT: Client = Client::new();
 /*
