@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use std::result::Result;
 
 use std::io::Read;
+use std::convert::From;
 
 use hyper;
 use hyper::Client;
@@ -46,6 +47,36 @@ pub fn save(json: &String,class: &String) -> Result<Json,String> {
         Err(String::from("error"))
     }
 }
+
+/*
+pub enum Json {
+    I64(i64),
+    U64(u64),
+    F64(f64),
+    String(String),
+    Boolean(bool),
+    Array(Array),
+    Object(Object),
+    Null,
+}
+*/
+
+macro_rules! to_json {
+    ($t:ty,$p:ident) => (
+        impl From<$t> for Json {
+                #[inline]
+                fn from(x: $t) -> Json {
+                    Json::$p(x)
+                }
+            }
+        )
+}
+
+to_json!(i64,I64);
+to_json!(u64,U64);
+to_json!(f64,F64);
+to_json!(String,String);
+to_json!(bool,Boolean);
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum LcObjectErrorCode {
