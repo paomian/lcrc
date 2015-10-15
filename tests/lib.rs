@@ -25,10 +25,14 @@ pub fn query_by_id(id: String, class: String) -> LcObject {
 */
 
 pub fn hello() {
-    let mut me = common::LcObject::new("me");
-    me.set("hello".to_string(),Json::String("world".to_string()));
-    me.set("paomian".to_string(),Json::String("ipaomian".to_string()));
+    let mut x = common::LcObject::new("me");
+    let mut y = common::LcObject::new("me");
+    let mut z = common::LcObject::new("me");
+    x.set("hello".to_string(),"world");
+    x.set("paomian".to_string(),"ipaomian");
     me.save();
+    y.set("x");
     println!("{}",me.object_id().unwrap());
+    println!("{}",me.get("hello").unwrap());
     println!("{}",me.to_string().unwrap());
 }

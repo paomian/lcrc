@@ -7,6 +7,7 @@ use std::result::Result;
 
 use std::io::Read;
 use std::convert::From;
+use std::borrow::Borrow;
 
 use hyper;
 use hyper::Client;
@@ -61,22 +62,6 @@ pub enum Json {
 }
 */
 
-macro_rules! to_json {
-    ($t:ty,$p:ident) => (
-        impl From<$t> for Json {
-                #[inline]
-                fn from(x: $t) -> Json {
-                    Json::$p(x)
-                }
-            }
-        )
-}
-
-to_json!(i64,I64);
-to_json!(u64,U64);
-to_json!(f64,F64);
-to_json!(String,String);
-to_json!(bool,Boolean);
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum LcObjectErrorCode {
@@ -98,6 +83,52 @@ pub struct LcObject {
     _be_saved: bool,
 }
 
+pub trait IntoJson {
+    fn into_json(self) -> Json;
+}
+
+macro_rules! it_json {
+    ($t:ty,$p:ident) => (
+        //impl<'a> IntoJson for &'a $t {
+        impl<'a> IntoJson for &'a $t {
+            #[inline]
+            fn into_json(self) -> Json {
+                Json::$p(self.clone())
+            }
+        }
+        )
+}
+
+
+it_json!(i64,I64);
+it_json!(u64,U64);
+it_json!(f64,F64);
+it_json!(String,String);
+it_json!(bool,Boolean);
+
+impl<'a> IntoJson for &'a str {
+    #[inline]
+    fn into_json(self) -> Json {
+        Json::String(String::from(self))
+    }
+}
+
+impl<'a> IntoJson for &'a LcObject{
+    #[inline]
+    fn into_json(self) -> Json {
+        if self._be_saved {
+            let mut tmp = BTreeMap::new();
+            tmp.insert("__type".to_string(),"Pointer".into_json());
+            tmp.insert("className".to_string(),(&self._class).into_json());
+            tmp.insert("objectId".to_string(), self._objectid
+                       .as_ref().map(|id| id.into_json()).unwrap());
+            Json::Object(tmp)
+        } else {
+            Json::Object(self._data.clone().unwrap())
+        }
+    }
+}
+
 impl LcObject {
     pub fn new(class: &str) -> LcObject {
         LcObject {_data: None,
@@ -115,26 +146,29 @@ impl LcObject {
         self._be_saved
     }
 
-    pub fn set(&mut self, key: String, value: Json) -> Option<Json> {
+    pub fn set<T: IntoJson>(&mut self, key: String, value: T) -> Option<Json> {
+        let v = value.into_json();
         if let Some(ref mut data) = self._data {
-            data.insert(key,value)
+            data.insert(key,v)
         } else {
             let mut map = BTreeMap::new();
-            map.insert(key,value);
+            map.insert(key,v);
             self._data = Some(map);
             None
         }
     }
 
-    pub fn get(&self,key: &str) -> Option<&Json> {
-        if let Some(ref data) = self._data {
-            data.get(key)
-        } else {
-            None
+    pub fn get<T: Ord + ?Sized>(&mut self,key: &T) -> Option<&mut Json>
+        where String: Borrow<T> {
+            if let Some(ref mut data) = self._data {
+                data.get_mut(key)
+            } else {
+                None
+            }
         }
-    }
 
-    pub fn remove (&mut self, key: &str) -> Option<Json> {
+    pub fn remove<T: Ord + ?Sized>(&mut self, key: &T) -> Option<Json>
+    where String: Borrow<T>{
         if let Some(ref mut data) = self._data {
             data.remove(key)
         } else {
