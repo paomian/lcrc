@@ -89,7 +89,6 @@ pub trait IntoJson {
 
 macro_rules! it_json {
     ($t:ty,$p:ident) => (
-        //impl<'a> IntoJson for &'a $t {
         impl<'a> IntoJson for &'a $t {
             #[inline]
             fn into_json(self) -> Json {
@@ -210,10 +209,12 @@ impl LcObject {
     pub fn save(&mut self) -> Result<bool,String> {
         if let Some(_) = self._data {
             let json = self.to_string().unwrap();
-            //save(&json,self._class)
             if let Ok(ref data) = save(&json,&self._class) {
-                let objid = data.as_object().unwrap().get("objectId").unwrap();
+                let o = data.as_object();
+                let objid = o.map(|x| x.get("objectId").unwrap()).unwrap();
+                let cat = o.map(|x| x.get("createdAt").unwrap()).unwrap();
                 self._objectid = Some(String::from(objid.as_string().unwrap()));
+                self.set("createdAt".to_string(), cat.as_string().unwrap());
                 self._be_saved = true;
                 Ok(true)
             } else {

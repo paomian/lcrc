@@ -30,9 +30,18 @@ pub fn hello() {
     let mut z = common::LcObject::new("me");
     x.set("hello".to_string(),"world");
     x.set("paomian".to_string(),"ipaomian");
-    me.save();
-    y.set("x");
-    println!("{}",me.object_id().unwrap());
-    println!("{}",me.get("hello").unwrap());
-    println!("{}",me.to_string().unwrap());
+    if x.save().is_ok() {
+        println!("{}",x.object_id().unwrap());
+    }
+    y.set("woshiy".to_string(),"shime");
+    y.set("woshiyy".to_string(),"什么鬼");
+    z.set("x".to_string(),&x);
+    z.set("y".to_string(),&y);
+    if z.save().is_ok() {
+        println!("{}",z.object_id().unwrap());
+    }
+    println!("{}",z.object_id().unwrap());
+    println!("{}",z.get("x").unwrap());
+    println!("{}",z.get("y").unwrap());
+    println!("{}",z.to_string().unwrap());
 }
