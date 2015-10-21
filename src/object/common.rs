@@ -84,14 +84,14 @@ pub struct LcObject {
 }
 
 pub trait IntoJson {
-    fn into_json(self) -> Json;
+    fn into_json(&self) -> Json;
 }
 
 macro_rules! it_json {
     ($t:ty,$p:ident) => (
-        impl<'a> IntoJson for &'a $t {
+        impl IntoJson for $t {
             #[inline]
-            fn into_json(self) -> Json {
+            fn into_json(&self) -> Json {
                 Json::$p(self.clone())
             }
         }
@@ -105,25 +105,37 @@ it_json!(f64,F64);
 it_json!(String,String);
 it_json!(bool,Boolean);
 
-impl<'a> IntoJson for &'a str {
+impl IntoJson for str {
     #[inline]
-    fn into_json(self) -> Json {
+    fn into_json(&self) -> Json {
         Json::String(String::from(self))
     }
 }
 
-impl<'a> IntoJson for &'a LcObject{
+impl IntoJson for Json {
     #[inline]
-    fn into_json(self) -> Json {
+    fn into_json(&self) -> Json {
+        self.clone()
+    }
+}
+
+impl IntoJson for LcObject{
+    #[inline]
+    fn into_json(&self) -> Json {
         if self._be_saved {
             let mut tmp = BTreeMap::new();
             tmp.insert("__type".to_string(),"Pointer".into_json());
             tmp.insert("className".to_string(),(&self._class).into_json());
-            tmp.insert("objectId".to_string(), self._objectid
-                       .as_ref().map(|id| id.into_json()).unwrap());
+            self._objectid.clone()
+                .and_then(|id|
+                          tmp.insert("objectId".to_string(),
+                                     id.into_json()));
             Json::Object(tmp)
         } else {
-            Json::Object(self._data.clone().unwrap())
+            match self._data {
+                Some(ref data) => Json::Object(data.clone()),
+                None => Json::Object(BTreeMap::new()),
+            }
         }
     }
 }
@@ -137,28 +149,28 @@ impl LcObject {
                   _objectid: None}
     }
 
-    pub fn get_class(&self) -> String {
-        self._class.clone()
+    pub fn get_class(&self) -> &String {
+        &self._class
     }
 
     pub fn saved(&self) -> bool {
         self._be_saved
     }
 
-    pub fn set<T: IntoJson>(&mut self, key: String, value: T) -> Option<Json> {
+    pub fn set<K: Into<String>,V: IntoJson>(&mut self, key: K, value: V) -> Option<Json> {
         let v = value.into_json();
         if let Some(ref mut data) = self._data {
-            data.insert(key,v)
+            data.insert(key.into(),v)
         } else {
             let mut map = BTreeMap::new();
-            map.insert(key,v);
+            map.insert(key.into(),v);
             self._data = Some(map);
             None
         }
     }
 
-    pub fn get<T: Ord + ?Sized>(&mut self,key: &T) -> Option<&mut Json>
-        where String: Borrow<T> {
+    pub fn get<K: Ord + ?Sized>(&mut self,key: &K) -> Option<&mut Json>
+        where String: Borrow<K> {
             if let Some(ref mut data) = self._data {
                 data.get_mut(key)
             } else {
@@ -166,8 +178,8 @@ impl LcObject {
             }
         }
 
-    pub fn remove<T: Ord + ?Sized>(&mut self, key: &T) -> Option<Json>
-    where String: Borrow<T>{
+    pub fn remove<K: Ord + ?Sized>(&mut self, key: &K) -> Option<Json>
+    where String: Borrow<K>{
         if let Some(ref mut data) = self._data {
             data.remove(key)
         } else {
@@ -211,10 +223,11 @@ impl LcObject {
             let json = self.to_string().unwrap();
             if let Ok(ref data) = save(&json,&self._class) {
                 let o = data.as_object();
-                let objid = o.map(|x| x.get("objectId").unwrap()).unwrap();
-                let cat = o.map(|x| x.get("createdAt").unwrap()).unwrap();
-                self._objectid = Some(String::from(objid.as_string().unwrap()));
-                self.set("createdAt".to_string(), cat.as_string().unwrap());
+                self._objectid = o.and_then(|x|x.get("objectId"))
+                    .and_then(|x| x.as_string())
+                    .map(|x| x.to_string());
+                o.and_then(|x| x.get("createdAt"))
+                    .map(|x| self.set("createdAt",x.clone()));
                 self._be_saved = true;
                 Ok(true)
             } else {
